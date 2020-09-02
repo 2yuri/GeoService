@@ -1,0 +1,13 @@
+{
+  "name": "geoservice",
+  "version": "1.0.0",
+  "description": "Geolocation Ecocentauro Microservice",
+  "main": "index.js",
+  "author": "@hyperyuri",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.20.0",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1"
+  }
+}
