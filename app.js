@@ -1,21 +1,15 @@
-require('dotenv').config()
-const express = require('express')
-const axios = require('axios')
+require("dotenv").config();
+const express = require("express");
+const bodyParser = require("body-parser");
 
-const app = express()
+const app = express();
 
-const port = process.env.API_PORT
+app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
-  res.send('oi')
-})
+app.use(require("./src/routes"));
 
-app.listen(port, () => {
-  console.log('pronto', process.env.API_PORT)
-})
-
-axios.get(`https://geocode.search.hereapi.com/v1/geocode?q=Invalidenstr+117%2C+Berlin&apiKey=${process.env.API_KEY}`)
-  .then(function(response){
-    console.log(response.data); // ex.: { user: 'Your User'}
-    console.log(response.status); // ex.: 200
-  });  
+app.listen(process.env.PORT || 3008, () => {
+  console.log(`🚀 Server running on port: ${process.env.PORT}`);
+});
