@@ -10,6 +10,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(require("./src/routes"));
 
-app.listen(process.env.PORT || 3008, () => {
+const server = app.listen(process.env.PORT || 3008, () => {
   console.log(`🚀 Server running on port: ${process.env.PORT}`);
 });
+
+server.timeout = 480000;

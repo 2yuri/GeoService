@@ -1,7 +1,8 @@
 const axios = require("axios");
-const unzip = require("unzip");
+const unzipper = require("unzipper");
 const fs = require("fs");
 const { default: Axios } = require("axios");
+const { on } = require("process");
 
 function formatValue(val) {
   const zero = "0";
@@ -41,41 +42,76 @@ module.exports = {
       `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}?action=status&apiKey=${process.env.API_KEY}`
     );
 
+    function unzipFile() {
+      fs.createReadStream("./zip/file.zip").pipe(
+        unzipper.Extract({ path: "./txt/" })
+      );
+
+      // fs.unlinkSync("./zip/file.zip");
+
+      setTimeout(function () {
+        readFile();
+      }, 2000);
+    }
+
+    function readFile() {
+      fs.readdir("./txt", function (err, file) {
+        if (err) {
+          console.log("erro ao ler os dados da pasta txt: ", err);
+        }
+
+        file.forEach(function (file) {
+          const data = fs.readFileSync("./txt/" + file, "utf8");
+
+          const arr = data.split("\n");
+
+          let response = [];
+
+          for (let i = 1; i < arr.length - 1; i++) {
+            value = {
+              LAT: arr[i].split("|")[3],
+              LONG: arr[i].split("|")[4],
+              ADDR: arr[i].split("|")[5],
+            };
+            response.push(value);
+          }
+
+          res.send({
+            value: response,
+          });
+        });
+      });
+    }
+
     async function getZipFile() {
       const path = "./zip/file.zip";
       const writer = fs.createWriteStream(path);
 
-      const response = await Axios({
-        url: `https://batch.geocoder.ls.hereapi.com/6.2/jobs/rHDqrmjVxg9wez0SD8bqlpwwaTb4xqPZ/result?apiKey=qlvZ8cXeNkYQYHdIl4__oCo440IyEy4wE3kXsQT2Hew`,
+      const zipData = await Axios({
+        url: `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}/result?apiKey=${process.env.API_KEY}`,
         method: "GET",
         responseType: "stream",
       });
 
-      response.data.pipe(writer);
+      zipData.data.pipe(writer);
 
       return new Promise((resolve, reject) => {
-        writer.on("finish", () => {
-          const readstream = fs.createReadStream(path);
-          const writeStream = fs.createReadStream("./txt/");
-
-          readstream.pipe(unzip.Parse()).pipe(writeStream);
-        });
+        writer.on("finish", unzipFile(resolve));
         writer.on("error", reject);
       });
     }
-    getZipFile();
 
     const StatusLoop = setInterval(async function () {
       if (status.data.Response.Status === "completed") {
+        console.log(status);
         clearInterval(StatusLoop);
         getZipFile();
       } else {
         status = await axios.get(
           `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}?action=status&apiKey=${process.env.API_KEY}`
         );
+        console.log(status);
       }
     }, 4000);
   },
 };
-
-// fs.unlinkSync("./zip/file.zip");
