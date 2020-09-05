@@ -47,9 +47,8 @@ module.exports = {
         unzipper.Extract({ path: "./txt/" })
       );
 
-      // fs.unlinkSync("./zip/file.zip");
-
       setTimeout(function () {
+        fs.unlinkSync("./zip/file.zip");
         readFile();
       }, 2000);
     }
@@ -79,6 +78,8 @@ module.exports = {
           res.send({
             value: response,
           });
+
+          fs.unlinkSync("./txt/" + file);
         });
       });
     }
@@ -101,17 +102,23 @@ module.exports = {
       });
     }
 
+    let counter = 10;
+
     const StatusLoop = setInterval(async function () {
       if (status.data.Response.Status === "completed") {
-        console.log(status);
         clearInterval(StatusLoop);
         getZipFile();
       } else {
-        status = await axios.get(
-          `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}?action=status&apiKey=${process.env.API_KEY}`
-        );
-        console.log(status);
+        if (counter >= 40) {
+          res.send({ id: "123" });
+          clearInterval(StatusLoop);
+        } else {
+          status = await axios.get(
+            `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}?action=status&apiKey=${process.env.API_KEY}`
+          );
+        }
+        counter += 10;
       }
-    }, 4000);
+    }, 10000);
   },
 };
