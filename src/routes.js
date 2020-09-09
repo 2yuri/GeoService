@@ -1,13 +1,9 @@
 const express = require("express");
-const {
-  LocationController,
-  LaterResController,
-  BathController,
-} = require("./controllers");
+const { LocationController, BatchController } = require("./controllers");
 
 const routes = express.Router();
 
 routes.post("/address", LocationController.captureLocation);
-routes.post("/bath", BathController.captureBath);
+routes.post("/bath", BatchController.captureBatch);
 
 module.exports = routes;
