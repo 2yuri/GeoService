@@ -2,7 +2,8 @@ const axios = require("axios");
 const unzipper = require("unzipper");
 const fs = require("fs");
 const { default: Axios } = require("axios");
-const { on } = require("process");
+
+let finalResponse = [];
 
 function formatValue(val) {
   const zero = "0";
@@ -21,26 +22,22 @@ module.exports = {
     let value = "recId|searchText|country\n";
 
     for (let i = 0; i < array.length; i++) {
-      value += `${formatValue(i + 1)}${i + 1}|${array[i].address} ${
-        array[i].number
-      } ${array[i].city}|${array[i].country}
-        \n
-        `;
+      value += `${array[i].id}|${array[i].address} ${array[i].number}, ${array[i].city} ${array[i].province}|${array[i].country}\n`;
     }
 
-    const response = await axios.post(
-      `https://batch.geocoder.ls.hereapi.com/6.2/jobs?apiKey=${process.env.API_KEY}&indelim=%7C&outdelim=%7C&action=run&outcols=displayLatitude,displayLongitude,locationLabel,houseNumber,street,district,city,postalCode,county,state,country&outputcombined=false`,
-      value,
-      {
-        headers: {
-          "Content-Type": "application/xml",
-        },
-      }
-    );
+    // const response = await axios.post(
+    //   `https://batch.geocoder.ls.hereapi.com/6.2/jobs?apiKey=${process.env.API_KEY}&indelim=%7C&outdelim=%7C&action=run&outcols=displayLatitude,displayLongitude,locationLabel,houseNumber,street,district,city,postalCode,county,state,country&outputcombined=false`,
+    //   value,
+    //   {
+    //     headers: {
+    //       "Content-Type": "application/xml",
+    //     },
+    //   }
+    // );
 
-    let status = await axios.get(
-      `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}?action=status&apiKey=${process.env.API_KEY}`
-    );
+    // let status = await axios.get(
+    //   `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}?action=status&apiKey=${process.env.API_KEY}`
+    // );
 
     function unzipFile() {
       fs.createReadStream("./zip/file.zip").pipe(
@@ -50,7 +47,7 @@ module.exports = {
       setTimeout(function () {
         fs.unlinkSync("./zip/file.zip");
         readFile();
-      }, 2000);
+      }, 10000);
     }
 
     function readFile() {
@@ -64,19 +61,33 @@ module.exports = {
 
           const arr = data.split("\n");
 
-          let response = [];
+          console.log(arr[1]);
 
           for (let i = 1; i < arr.length - 1; i++) {
+            console.log(array[i - 1]);
+
             value = {
-              LAT: arr[i].split("|")[3],
-              LONG: arr[i].split("|")[4],
-              ADDR: arr[i].split("|")[5],
+              id: arr[i].split("|")[0],
+              addressFormated: arr[i].split("|")[5],
+              addresInformation: {
+                street: arr[i].split("|")[7],
+                number: arr[i].split("|")[6],
+                district: arr[i].split("|")[8],
+                city: arr[i].split("|")[9],
+                province: arr[i].split("|")[12],
+                ZIP: arr[i].split("|")[10],
+                country: arr[i].split("|")[11],
+              },
+              geoInformation: {
+                lat: arr[i].split("|")[3],
+                lng: arr[i].split("|")[4],
+              },
             };
-            response.push(value);
+            finalResponse.push(value);
           }
 
           res.send({
-            value: response,
+            value: finalResponse,
           });
 
           fs.unlinkSync("./txt/" + file);
@@ -85,40 +96,31 @@ module.exports = {
     }
 
     async function getZipFile() {
-      const path = "./zip/file.zip";
-      const writer = fs.createWriteStream(path);
-
-      const zipData = await Axios({
-        url: `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}/result?apiKey=${process.env.API_KEY}`,
-        method: "GET",
-        responseType: "stream",
-      });
-
-      zipData.data.pipe(writer);
-
-      return new Promise((resolve, reject) => {
-        writer.on("finish", unzipFile(resolve));
-        writer.on("error", reject);
-      });
+      await axios
+        .get(
+          `https://batch.geocoder.ls.hereapi.com/6.2/jobs/Px3RG6zwxkfX65YQIFAT780XhFkphtsH/result?apiKey=${process.env.API_KEY}`,
+          { responseType: "stream" }
+        )
+        .then(async (result) => {
+          await result.data.pipe(fs.createWriteStream("./zip/file.zip"));
+          unzipFile();
+        })
+        .catch((error) => {
+          console.log("erro ao baixar zip", error);
+        });
     }
 
-    let counter = 10;
+    getZipFile();
 
-    const StatusLoop = setInterval(async function () {
-      if (status.data.Response.Status === "completed") {
-        clearInterval(StatusLoop);
-        getZipFile();
-      } else {
-        if (counter >= 40) {
-          res.send({ id: "123" });
-          clearInterval(StatusLoop);
-        } else {
-          status = await axios.get(
-            `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}?action=status&apiKey=${process.env.API_KEY}`
-          );
-        }
-        counter += 10;
-      }
-    }, 10000);
+    // const StatusLoop = setInterval(async function () {
+    //   if (status.data.Response.Status === "completed") {
+    //     clearInterval(StatusLoop);
+    //     getZipFile();
+    //   } else {
+    //     status = await axios.get(
+    //       `https://batch.geocoder.ls.hereapi.com/6.2/jobs/${response.data.Response.MetaInfo.RequestId}?action=status&apiKey=${process.env.API_KEY}`
+    //     );
+    //   }
+    // }, 1000);
   },
 };

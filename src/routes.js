@@ -1,5 +1,9 @@
 const express = require("express");
-const { LocationController, BathController } = require("./controllers");
+const {
+  LocationController,
+  LaterResController,
+  BathController,
+} = require("./controllers");
 
 const routes = express.Router();
 

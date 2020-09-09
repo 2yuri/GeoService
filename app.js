@@ -4,7 +4,7 @@ const bodyParser = require("body-parser");
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "1000mb" }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
